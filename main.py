@@ -132,7 +132,7 @@ def generarSANNA_Recaudacion():
     now = datetime.now()
     dt_string =  now.strftime("%Y-%m-%d %H:%M")
     print('--------------------------------------------------------------------------------')
-    print(f'|{dt_string}| -> Cargando TGR Plano 2 -> {recaudacion}')
+    print(f'|{dt_string}| -> Cargando Manuales -> {recaudacion}')
     cnn.execute_stored_procedure_nreturn("[dbo].[SP_SANNA_Cargar_P1_MANUAL] @recaudacion='"+recaudacion+"'")
     
     #cnn.execute_query(f"exec SP_SEGUIMIENTO_SANNA '{recaudacion}'")
