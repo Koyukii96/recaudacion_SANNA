@@ -8,7 +8,9 @@ from sqlalchemy.sql import text
 import configparser
 import os, shutil, pathlib, fnmatch
 import numpy as np
+from openpyxl import Workbook, load_workbook
 
+##Configs
 config = configparser.ConfigParser()
 config.read('config.ini')
 
@@ -149,6 +151,7 @@ def generar_planos_salida():
     }
     cnn = db3.DatabaseConnection("sqlserver", db_info_SANNA, trust_connection=True)   
     work = Path.cwd()
+    ruta_templates = Path(work, 'templates')
     Path(work,'Archivos_salida',recaudacion).mkdir(parents=True, exist_ok=True)
     ruta = Path(work,'Archivos_salida',recaudacion)
     
@@ -157,31 +160,31 @@ def generar_planos_salida():
     dt_string =  now.strftime("%Y-%m-%d %H:%M")
     print('--------------------------------------------------------------------------------')
     print(f'|{dt_string}| -> Generando Plano 1 -> {recaudacion}')
-    df_plano_1 = pd.read_sql_query("exec [dbo].[SP_SALIDA_PLANO_1] @recaudacion='"+recaudacion+"'", cnn.engine)    
+    #df_plano_1 = pd.read_sql_query("exec [dbo].[SP_SALIDA_PLANO_1] @recaudacion='"+recaudacion+"'", cnn.engine)    
     archivo = Path(ruta, '30200_PLANO1_'+recaudacion+'.csv')
-    df_plano_1.fillna("",inplace=True)
-    df_plano_1.to_csv(archivo, sep='|', encoding='UTF-8', index=False, header=False)   
+    #df_plano_1.fillna("",inplace=True)
+    #df_plano_1.to_csv(archivo, sep='|', encoding='UTF-8', index=False, header=False)   
 
     
     now = datetime.now()
     dt_string =  now.strftime("%Y-%m-%d %H:%M")
     print('--------------------------------------------------------------------------------')
     print(f'|{dt_string}| -> Generando Plano 2 -> {recaudacion}')
-    df_plano_2 = pd.read_sql_query("exec [dbo].[SP_SALIDA_PLANO_2] @recaudacion='"+recaudacion+"'", cnn.engine)    
+    #df_plano_2 = pd.read_sql_query("exec [dbo].[SP_SALIDA_PLANO_2] @recaudacion='"+recaudacion+"'", cnn.engine)    
     archivo2 = Path(ruta, '30200_PLANO2_'+recaudacion+'.csv')
-    df_plano_2.fillna("",inplace=True)
-    df_plano_2.to_csv(archivo2, sep='|', encoding='UTF-8', index=False, header=False)
+    #df_plano_2.fillna("",inplace=True)
+    #df_plano_2.to_csv(archivo2, sep='|', encoding='UTF-8', index=False, header=False)
     
     
     now = datetime.now()
     dt_string =  now.strftime("%Y-%m-%d %H:%M")
     print('--------------------------------------------------------------------------------')
     print(f'|{dt_string}| -> Generando Plano 3 y 4 -> {recaudacion}')
-    df_plano_3 = pd.DataFrame()
+    #df_plano_3 = pd.DataFrame()
     archivo3 = Path(ruta, '30200_PLANO3_'+recaudacion+'.csv')
     archivo4 = Path(ruta, '30200_PLANO4_'+recaudacion+'.csv')
-    df_plano_3.to_csv(archivo3, sep='|', encoding='UTF-8', index=False)
-    df_plano_3.to_csv(archivo4, sep='|', encoding='UTF-8', index=False)
+    #df_plano_3.to_csv(archivo3, sep='|', encoding='UTF-8', index=False)
+    #df_plano_3.to_csv(archivo4, sep='|', encoding='UTF-8', index=False)
     
     
     now = datetime.now()
@@ -190,7 +193,14 @@ def generar_planos_salida():
     print(f'|{dt_string}| -> Generando XML -> {recaudacion}')
     df_xml = pd.read_sql_query("exec [dbo].[SP_XML_SANNA] @recaudacion='"+recaudacion+"'", cnn.engine)    
     archivo_xml = Path(ruta, '30200_SANNA_RECAUDACION_'+recaudacion+'.xml')
-    df_xml.to_csv(archivo_xml, sep='|', encoding='UTF-8', header=False, index=False)
+    df_xml.to_csv(archivo_xml, encoding='UTF-8', header=False, index=False)
+    
+    template_seguimiento = Path(ruta_templates, 'Seguimiento_Base.xlsx')
+    archivo_seguimiento = Path(ruta, 'SEGUIMIENTO_'+recaudacion+'.xlsx')
+    
+    wb = load_workbook(template_seguimiento)
+    ws = wb.active
+    wb.save(archivo_seguimiento)
 # check if is main
 if __name__ == '__main__':
     utils.borra_pantalla()
