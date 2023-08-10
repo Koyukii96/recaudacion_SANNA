@@ -98,8 +98,9 @@ def generarSalidaEnteraSANNA_Recaudacion():
     
 def generarSANNA_Recaudacion():
     recaudacion = input("-> Ingrese el Periodo de recaudación (YYYYMM): ")
-    cuota = input("-> Ingrese el N° Cuota de TGR (00): ")
-    
+    cuotas = input("-> Ingrese el N° Cuota de TGR (01-02-01R): ")
+    list_cuotas = cuotas.split('-')
+
     db_info_SANNA = {
         "host": config['DEFAULT']['DB_HOST'],
         "port": config['DEFAULT']['DB_PORT'],
@@ -121,17 +122,20 @@ def generarSANNA_Recaudacion():
     print('--------------------------------------------------------------------------------')
     print(f'|{dt_string}| -> Cargando Previred Plano 2 -> {recaudacion}')
     cnn.execute_stored_procedure_nreturn("[dbo].[SP_SANNA_Cargar_P2_Previred] @recaudacion='"+recaudacion+"'")
-    now = datetime.now()
-    dt_string =  now.strftime("%Y-%m-%d %H:%M")
-    print('--------------------------------------------------------------------------------')
-    print(f'|{dt_string}| -> Cargando TGR Plano 1 -> {recaudacion}')
-    cnn.execute_stored_procedure_nreturn("[dbo].[SP_SANNA_Cargar_P1_TGR] @recaudacion='"+recaudacion+"', @cuota='"+cuota+"'")
-    now = datetime.now()
-    dt_string =  now.strftime("%Y-%m-%d %H:%M")
-    print('--------------------------------------------------------------------------------')
-    print(f'|{dt_string}| -> Cargando TGR Plano 2 -> {recaudacion}')
-    cnn.execute_stored_procedure_nreturn("[dbo].[SP_SANNA_Cargar_P2_TGR] @recaudacion='"+recaudacion+"', @cuota='"+cuota+"'")
-    now = datetime.now()
+    now = datetime.now()  
+    
+    for cuota in list_cuotas:
+        dt_string =  now.strftime("%Y-%m-%d %H:%M")
+        print('--------------------------------------------------------------------------------')
+        print(f'|{dt_string}| -> Cargando TGR Plano 1 -> {recaudacion} | Cuota -> {cuota}')
+        cnn.execute_stored_procedure_nreturn("[dbo].[SP_SANNA_Cargar_P1_TGR] @recaudacion='"+recaudacion+"', @cuota='"+cuota+"'")
+        now = datetime.now()
+        dt_string =  now.strftime("%Y-%m-%d %H:%M")
+        print('--------------------------------------------------------------------------------')
+        print(f'|{dt_string}| -> Cargando TGR Plano 2 -> {recaudacion} | Cuota -> {cuota}')
+        cnn.execute_stored_procedure_nreturn("[dbo].[SP_SANNA_Cargar_P2_TGR] @recaudacion='"+recaudacion+"', @cuota='"+cuota+"'")
+        now = datetime.now()
+        
     dt_string =  now.strftime("%Y-%m-%d %H:%M")
     print('--------------------------------------------------------------------------------')
     print(f'|{dt_string}| -> Cargando Manuales -> {recaudacion}')
@@ -193,14 +197,49 @@ def generar_planos_salida():
     print(f'|{dt_string}| -> Generando XML -> {recaudacion}')
     df_xml = pd.read_sql_query("exec [dbo].[SP_XML_SANNA] @recaudacion='"+recaudacion+"'", cnn.engine)    
     archivo_xml = Path(ruta, '30200_SANNA_RECAUDACION_'+recaudacion+'.xml')
-    df_xml.to_csv(archivo_xml, encoding='UTF-8', header=False, index=False)
+    comilla = " "
+    df_xml.to_csv(archivo_xml, encoding='UTF-8', header=False, index=False, quotechar=comilla)
+    
+    
+    #Generar SEGUIMIENTO
+    now = datetime.now()
+    dt_string =  now.strftime("%Y-%m-%d %H:%M")
+    print('--------------------------------------------------------------------------------')
+    print(f'|{dt_string}| -> Generando Seguimiento -> {recaudacion}')
+    df_seguimiento = pd.read_sql_query("exec [dbo].[SP_SEGUIMIENTO_SANNA] @recaudacion='"+recaudacion+"'", cnn.engine)    
     
     template_seguimiento = Path(ruta_templates, 'Seguimiento_Base.xlsx')
     archivo_seguimiento = Path(ruta, 'SEGUIMIENTO_'+recaudacion+'.xlsx')
-    
     wb = load_workbook(template_seguimiento)
     ws = wb.active
+    
+    # Iteración por filas del DataFrame:
+    for indice_fila, fila in df_seguimiento.iterrows():
+        index = int(str(indice_fila))+3
+        ws['A'+str(index)] = str(fila['origen'])
+        ws['B'+str(index)] = str(fila['periodo'])
+        ws['C'+str(index)] = fila['A']
+        ws['D'+str(index)] = fila['A1']
+        ws['E'+str(index)] = fila['A2']
+        ws['F'+str(index)] = fila['A3']
+        ws['G'+str(index)] = fila['A4']
+        ws['H'+str(index)] = fila['A5']
+        ws['I'+str(index)] = fila['A6']
+        ws['J'+str(index)] = fila['A7']
+        ws['K'+str(index)] = fila['A8']
+        ws['L'+str(index)] = fila['B']
+        ws['M'+str(index)] = fila['B1']
+        ws['N'+str(index)] = fila['B2']
+        ws['O'+str(index)] = fila['B3']
+        ws['P'+str(index)] = fila['B4']
+        ws['Q'+str(index)] = fila['B5']
+        ws['R'+str(index)] = fila['B6']
+        ws['S'+str(index)] = fila['trabajadores_unicos']
+        ws['T'+str(index)] = fila['empleadores_unicos']
+        ws['U'+str(index)] = fila['planillas_unicas']
     wb.save(archivo_seguimiento)
+    
+    
 # check if is main
 if __name__ == '__main__':
     utils.borra_pantalla()
@@ -210,7 +249,6 @@ if __name__ == '__main__':
         ==============
         1. Generar SANNA Recaudacion Propia 
         2. Generar Planos SANNA
-        3. Cargar Archivo Previred
         0. Salir
         """)
         opcion = input("Ingrese una opción: ")
@@ -218,8 +256,6 @@ if __name__ == '__main__':
             generarSANNA_Recaudacion()
         elif opcion == "2":
             generar_planos_salida()
-        elif opcion == "3":
-            cargarPrevired_a_PROPIA()
         elif opcion == "0":
             print("Saliendo...")
             break
