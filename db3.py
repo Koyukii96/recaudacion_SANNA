@@ -75,3 +75,7 @@ class DatabaseConnection:
             result = session.execute(text(f"EXEC {sp_name}"), parameters)
             session.commit()
             return result
+    def execute_query_nreturn(self, query: str, parameters: Optional[Dict[str, str]] = None):
+        with self.Session() as session:
+            result = session.execute(query, parameters)
+            session.commit()
